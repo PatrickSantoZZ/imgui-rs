@@ -947,6 +947,11 @@ pub trait InputTextCallbackHandler {
     fn char_filter(&mut self, c: char) -> Option<char> {
         Some(c)
     }
+    fn imchar_filter(&mut self, c: sys::ImWchar) -> Option<sys::ImWchar> {
+        std::char::from_u32(c.into())
+            .map(|c| self.char_filter(c).map(|c| c as sys::ImWchar))
+            .unwrap_or(Some(c))
+    }
 
     /// Allows one to perform autocompletion work when the Tab key has been pressed.
     ///
@@ -1258,12 +1263,10 @@ extern "C" fn callback<T: InputTextCallbackHandler>(
             }
         }
         InputTextFlags::CALLBACK_CHAR_FILTER => {
-            let chr = unsafe { std::char::from_u32((*data).EventChar).unwrap() };
-            let new_data = match callback_data.user_data.cback_handler.char_filter(chr) {
-                Some(value) => u32::from(value),
-                // 0 means "do not use this char" in imgui docs
-                None => 0,
-            };
+            let imchr = unsafe { (*data).EventChar };
+            // 0 means "do not use this char" in imgui docs
+            let new_data = callback_data.user_data.cback_handler.imchar_filter(imchr)
+                .unwrap_or(0);
             // set the new char...
             unsafe {
                 (*data).EventChar = new_data;

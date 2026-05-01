@@ -1,15 +1,17 @@
 use bitflags::bitflags;
 use std::f32;
-use std::ops::{Index, IndexMut};
-use std::os::raw::{c_char, c_void};
+use std::ffi::CStr;
+use std::mem::transmute;
+use std::ops::{Deref, Index, IndexMut};
+use std::os::raw::c_char;
+use std::ptr;
 use std::time::Duration;
 
 use crate::fonts::atlas::FontAtlas;
-use crate::fonts::font::Font;
 use crate::input::keyboard::Key;
 use crate::input::mouse::MouseButton;
 use crate::internal::{ImVector, RawCast};
-use crate::{sys, MouseSource};
+use crate::sys;
 
 bitflags! {
     /// Configuration flags
@@ -117,7 +119,12 @@ bitflags! {
 }
 
 /// Settings and inputs/outputs for imgui-rs
+#[repr(transparent)]
+pub struct Io {
+    io: sys::ImGuiIO,
+}
 #[repr(C)]
+#[cfg(todo)]
 pub struct Io {
     /// Flags set by user/application
     pub config_flags: ConfigFlags,
@@ -395,6 +402,7 @@ unsafe impl RawCast<sys::ImGuiIO> for Io {}
 impl Io {
     /// Queue new character input
     #[doc(alias = "AddInputCharactersUTF8")]
+    #[inline]
     pub fn add_input_character(&mut self, character: char) {
         let mut buf = [0; 5];
         character.encode_utf8(&mut buf);
@@ -404,16 +412,24 @@ impl Io {
     }
     /// Clear character input buffer
     #[doc(alias = "ClearCharacters")]
+    #[inline(always)]
     pub fn clear_input_characters(&mut self) {
         unsafe {
             sys::ImGuiIO_ClearInputKeys(self.raw_mut());
         }
     }
     /// Peek character input buffer, return a copy of entire buffer
+    #[inline]
     pub fn peek_input_characters(&self) -> String {
         self.input_queue_characters().collect()
     }
 
+    #[inline(always)]
+    pub fn input_queue_characters_raw(&self) -> &ImVector<sys::ImWchar> {
+      unsafe {
+        transmute::<&sys::ImVector_ImWchar, _>(&self.io.InputQueueCharacters)
+      }
+    }
     /// Returns a view of the data in the input queue (without copying it).
     ///
     /// The returned iterator is a simple mapping over a slice more or less what
@@ -422,36 +438,45 @@ impl Io {
     pub fn input_queue_characters(
         &self,
     ) -> impl DoubleEndedIterator<Item = char> + ExactSizeIterator + Clone + '_ {
-        self.input_queue_characters
+        self.input_queue_characters_raw()
             .as_slice()
             .iter()
             // TODO: are the values in the buffer guaranteed to be valid unicode
             // scalar values? if so we can just expose this as a `&[char]`...
-            .map(|c| core::char::from_u32(*c).unwrap_or(core::char::REPLACEMENT_CHARACTER))
+            .map(|c| core::char::from_u32(*c as u32).unwrap_or(core::char::REPLACEMENT_CHARACTER))
     }
 
+    #[inline(always)]
+    pub fn delta_time_s(&self) -> &f32 {
+        &self.io.DeltaTime
+    }
+    #[inline]
     pub fn update_delta_time(&mut self, delta: Duration) {
-        self.delta_time = delta.as_secs_f32().max(f32::MIN_POSITIVE);
+        self.io.DeltaTime = delta.as_secs_f32().max(f32::MIN_POSITIVE);
     }
 
+    #[inline(always)]
     pub fn add_mouse_pos_event(&mut self, pos: [f32; 2]) {
         unsafe {
             sys::ImGuiIO_AddMousePosEvent(self.raw_mut(), pos[0], pos[1]);
         }
     }
 
+    #[inline(always)]
     pub fn add_mouse_button_event(&mut self, button: MouseButton, down: bool) {
         unsafe {
             sys::ImGuiIO_AddMouseButtonEvent(self.raw_mut(), button as i32, down);
         }
     }
 
+    #[inline(always)]
     pub fn add_mouse_wheel_event(&mut self, wheel: [f32; 2]) {
         unsafe {
             sys::ImGuiIO_AddMouseWheelEvent(self.raw_mut(), wheel[0], wheel[1]);
         }
     }
 
+    #[inline(always)]
     pub fn add_key_event(&mut self, key: Key, down: bool) {
         unsafe {
             sys::ImGuiIO_AddKeyEvent(self.raw_mut(), key as u32, down);
@@ -461,34 +486,129 @@ impl Io {
     /// Queue a gain/loss of focus for the application (generally based on OS/platform focus of your window)
     /// Note: [`io.config_debug_ignore_focus_loss`] will ignore this event from firing
     #[doc(alias = "AddFocusEvent")]
+    #[inline(always)]
     pub fn add_focus_event(&mut self, focused: bool) {
         unsafe {
             sys::ImGuiIO_AddFocusEvent(self.raw_mut(), focused);
         }
     }
 
+    #[inline(always)]
     pub fn add_key_analog_event(&mut self, key: Key, down: bool, value: f32) {
         unsafe {
             sys::ImGuiIO_AddKeyAnalogEvent(self.raw_mut(), key as u32, down, value);
         }
     }
+
+    #[inline]
+    pub fn ini_filename(&self) -> Option<&CStr> {
+        match self.io.IniFilename as *const c_char {
+            p if p.is_null() => None,
+            p => Some(unsafe {
+                CStr::from_ptr(p)
+            }),
+        }
+    }
+    pub unsafe fn set_ini_filename_unchecked(&mut self, filename: Option<&CStr>) {
+        self.io.IniFilename = filename
+            .map(|f| f.as_ptr() as *const _)
+            .unwrap_or(ptr::null());
+    }
+    #[inline]
+    pub fn log_filename(&self) -> Option<&CStr> {
+        match self.io.LogFilename as *const c_char {
+            p if p.is_null() => None,
+            p => Some(unsafe {
+                CStr::from_ptr(p)
+            }),
+        }
+    }
+    pub unsafe fn set_log_filename_unchecked(&mut self, filename: Option<&CStr>) {
+        self.io.LogFilename = filename
+            .map(|f| f.as_ptr() as *const _)
+            .unwrap_or(ptr::null());
+    }
+    #[inline]
+    pub fn backend_platform_name(&self) -> Option<&CStr> {
+        match self.io.BackendPlatformName as *const c_char {
+            p if p.is_null() => None,
+            p => Some(unsafe {
+                CStr::from_ptr(p)
+            }),
+        }
+    }
+    pub unsafe fn set_backend_platform_name_unchecked(&mut self, name: Option<&CStr>) {
+        self.io.BackendPlatformName = name
+            .map(|f| f.as_ptr() as *const _)
+            .unwrap_or(ptr::null());
+    }
+    #[inline]
+    pub fn backend_renderer_name(&self) -> Option<&CStr> {
+        match self.io.BackendRendererName as *const c_char {
+            p if p.is_null() => None,
+            p => Some(unsafe {
+                CStr::from_ptr(p)
+            }),
+        }
+    }
+    pub unsafe fn set_backend_renderer_name_unchecked(&mut self, name: Option<&CStr>) {
+        self.io.BackendRendererName = name
+            .map(|f| f.as_ptr() as *const _)
+            .unwrap_or(ptr::null());
+    }
+
+    #[inline(always)]
+    pub fn fonts(&self) -> &FontAtlas {
+        unsafe {
+            FontAtlas::from_raw(&*self.io.Fonts)
+        }
+    }
+    #[inline(always)]
+    pub fn fonts_mut(&mut self) -> &mut FontAtlas {
+        // we take this with an `&mut Self` here, which means
+        // that we can't get the sharedfontatlas through safe code
+        // otherwise
+        unsafe {
+            FontAtlas::from_raw_mut(&mut *self.io.Fonts)
+        }
+    }
+
+    #[inline(always)]
+    pub fn raw(&self) -> &sys::ImGuiIO {
+        &self.io
+    }
+    #[inline(always)]
+    pub unsafe fn raw_mut(&mut self) -> &mut sys::ImGuiIO {
+        &mut self.io
+    }
 }
 
 impl Index<MouseButton> for Io {
     type Output = bool;
+    #[inline]
     fn index(&self, index: MouseButton) -> &bool {
-        &self.mouse_down[index as usize]
+        &self.io.MouseDown[index as usize]
     }
 }
 
 impl IndexMut<MouseButton> for Io {
+    #[inline]
     fn index_mut(&mut self, index: MouseButton) -> &mut bool {
-        &mut self.mouse_down[index as usize]
+        &mut self.io.MouseDown[index as usize]
+    }
+}
+
+impl Deref for Io {
+    type Target = sys::ImGuiIO;
+    #[inline(always)]
+    fn deref(&self) -> &Self::Target {
+        &self.io
     }
 }
 
 #[test]
 #[cfg(test)]
+#[cfg(todo)]
 fn test_io_memory_layout() {
     use std::mem;
     assert_eq!(mem::size_of::<Io>(), mem::size_of::<sys::ImGuiIO>());

@@ -63,6 +63,21 @@ impl FontGlyphRanges {
     // should accept `char` (we'd still have to check that the range doesn't
     // fully contain the surrogate range though)
     pub fn from_slice(slice: &'static [u32]) -> FontGlyphRanges {
+        let imchars = match slice {
+            slice if size_of::<sys::ImWchar>() == size_of::<u32>() => unsafe {
+                core::mem::transmute(slice)
+            },
+            slice16 => {
+                let imchars = slice16.iter()
+                    // TODO: split into surrogates? idk bleh
+                    .map(|&c| sys::ImWchar::try_from(c).unwrap_or(sys::IM_UNICODE_CODEPOINT_INVALID as sys::ImWchar))
+                    .collect::<Box<_>>();
+                &Box::leak(imchars)[..]
+            },
+        };
+        Self::from_imchars(imchars)
+    }
+    pub fn from_imchars(slice: &'static [sys::ImWchar]) -> FontGlyphRanges {
         assert_eq!(
             slice.len() % 2,
             1,
@@ -81,8 +96,14 @@ impl FontGlyphRanges {
                  (Glyph is zero at index {})",
                 i
             );
+            assert_ne!(
+                glyph as u32, sys::IM_UNICODE_CODEPOINT_INVALID as u32,
+                "A glyph in a range cannot be invalid. \
+                 (Glyph is invalid at index {})",
+                i
+            );
             assert!(
-                glyph <= core::char::MAX as u32,
+                (glyph as u32) <= sys::IM_UNICODE_CODEPOINT_MAX as u32,
                 "A glyph in a range cannot exceed the maximum codepoint. \
                  (Glyph is {:#x} at index {})",
                 glyph,
@@ -126,7 +147,7 @@ impl FontGlyphRanges {
     /// # Safety
     ///
     /// It is up to the caller to guarantee the slice contents are valid.
-    pub unsafe fn from_slice_unchecked(slice: &'static [u32]) -> FontGlyphRanges {
+    pub unsafe fn from_slice_unchecked(slice: &'static [sys::ImWchar]) -> FontGlyphRanges {
         FontGlyphRanges::from_ptr(slice.as_ptr())
     }
 
@@ -138,7 +159,7 @@ impl FontGlyphRanges {
     ///
     /// It is up to the caller to guarantee the pointer is not null, remains valid forever, and
     /// points to valid data.
-    pub unsafe fn from_ptr(ptr: *const u32) -> FontGlyphRanges {
+    pub unsafe fn from_ptr(ptr: *const sys::ImWchar) -> FontGlyphRanges {
         FontGlyphRanges(FontGlyphRangeData::Custom(ptr))
     }
 

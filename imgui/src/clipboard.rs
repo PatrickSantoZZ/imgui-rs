@@ -1,3 +1,6 @@
+// TODO: use fn_addr_eq if MSRV >= 1.85
+#![allow(unpredictable_function_pointer_comparisons)]
+
 use std::ffi::{CStr, CString};
 use std::fmt;
 use std::os::raw::c_char;

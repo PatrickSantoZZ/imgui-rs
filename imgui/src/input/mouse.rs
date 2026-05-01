@@ -58,6 +58,8 @@ pub enum MouseCursor {
     ResizeNWSE = sys::ImGuiMouseCursor_ResizeNWSE,
     /// Not used automatically, use for e.g. hyperlinks
     Hand = sys::ImGuiMouseCursor_Hand,
+    Wait = sys::ImGuiMouseCursor_Wait,
+    Progress = sys::ImGuiMouseCursor_Progress,
     /// When hovering something with disallowed interactions.
     ///
     /// Usually a crossed circle.
@@ -75,6 +77,8 @@ impl MouseCursor {
         MouseCursor::ResizeNESW,
         MouseCursor::ResizeNWSE,
         MouseCursor::Hand,
+        MouseCursor::Wait,
+        MouseCursor::Progress,
         MouseCursor::NotAllowed,
     ];
     /// Total count of `MouseCursor` variants
@@ -251,6 +255,8 @@ impl Ui {
             sys::ImGuiMouseCursor_ResizeNESW => Some(MouseCursor::ResizeNESW),
             sys::ImGuiMouseCursor_ResizeNWSE => Some(MouseCursor::ResizeNWSE),
             sys::ImGuiMouseCursor_Hand => Some(MouseCursor::Hand),
+            sys::ImGuiMouseCursor_Wait => Some(MouseCursor::Wait),
+            sys::ImGuiMouseCursor_Progress => Some(MouseCursor::Progress),
             sys::ImGuiMouseCursor_NotAllowed => Some(MouseCursor::NotAllowed),
             _ => None,
         }

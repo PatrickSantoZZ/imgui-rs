@@ -17,7 +17,7 @@ pub struct DrawData {
     /// For convenience, sum of all draw list vertex buffer sizes.
     pub total_vtx_count: i32,
     // Array of DrawList.
-    cmd_lists: ImVector<DrawList>,
+    cmd_lists: ImVector<*mut DrawList>,
     /// Upper-left position of the viewport to render.
     ///
     /// (= upper-left corner of the orthogonal projection matrix to use)
@@ -34,6 +34,7 @@ pub struct DrawData {
 
     /// Viewport carrying the DrawData instance, might be of use to the renderer (generally not).
     owner_viewport: *mut sys::ImGuiViewport,
+    textures: ImVector<*mut sys::ImTextureData>,
 }
 
 unsafe impl RawCast<sys::ImDrawData> for DrawData {}
@@ -83,6 +84,19 @@ impl DrawData {
             sys::ImDrawData_ScaleClipRects(self.raw_mut(), fb_scale.into());
         }
     }
+    #[inline(always)]
+    pub fn sys(&self) -> &sys::ImDrawData {
+        unsafe { self.raw() }
+    }
+    #[inline(always)]
+    pub unsafe fn sys_mut(&mut self) -> &mut sys::ImDrawData {
+        self.raw_mut()
+    }
+}
+impl std::ops::Deref for DrawData {
+    type Target = sys::ImDrawData;
+    #[inline(always)]
+    fn deref(&self) -> &Self::Target { self.sys() }
 }
 
 /// Iterator over draw lists
@@ -127,6 +141,7 @@ fn test_drawdata_memory_layout() {
     assert_field_offset!(display_pos, DisplayPos);
     assert_field_offset!(display_size, DisplaySize);
     assert_field_offset!(framebuffer_scale, FramebufferScale);
+    assert_field_offset!(textures, Textures);
 }
 
 /// Draw command list
@@ -229,7 +244,7 @@ impl Iterator for DrawCmdIterator<'_> {
         self.iter.next().map(|cmd| {
             let cmd_params = DrawCmdParams {
                 clip_rect: cmd.ClipRect.into(),
-                texture_id: TextureId::from(cmd.TextureId),
+                texture_id: unsafe { TextureId::from_raw_ref(cmd.TexRef) },
                 vtx_offset: cmd.VtxOffset as usize,
                 idx_offset: cmd.IdxOffset as usize,
             };

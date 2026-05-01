@@ -15,6 +15,7 @@ pub struct FontGlyph {
     pub v0: f32,
     pub u1: f32,
     pub v1: f32,
+    pack_id: i32,
 }
 
 impl FontGlyph {
@@ -30,6 +31,19 @@ impl FontGlyph {
     pub fn set_visible(&mut self, visible: bool) {
         unsafe { self.raw_mut().set_Visible(visible as u32) }
     }
+    #[inline(always)]
+    pub fn sys(&self) -> &sys::ImFontGlyph {
+        unsafe { self.raw() }
+    }
+    #[inline(always)]
+    pub unsafe fn sys_mut(&mut self) -> &mut sys::ImFontGlyph {
+        self.raw_mut()
+    }
+}
+impl std::ops::Deref for FontGlyph {
+    type Target = sys::ImFontGlyph;
+    #[inline(always)]
+    fn deref(&self) -> &Self::Target { self.sys() }
 }
 
 unsafe impl RawCast<sys::ImFontGlyph> for FontGlyph {}
@@ -64,4 +78,5 @@ fn test_font_glyph_memory_layout() {
     assert_field_offset!(v0, V0);
     assert_field_offset!(u1, U1);
     assert_field_offset!(v1, V1);
+    assert_field_offset!(pack_id, PackId);
 }

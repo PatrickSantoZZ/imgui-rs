@@ -4,12 +4,15 @@ use std::ops::{Index, IndexMut};
 
 use crate::internal::RawCast;
 use crate::Direction;
-use crate::{sys, HoveredFlags};
+use crate::{sys, HoveredFlags, TreeNodeFlags};
 
 /// User interface style/colors
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Style {
+    pub font_size_base: f32,
+    pub font_scale_main: f32,
+    pub font_scale_dpi: f32,
     /// Global alpha applies to everything
     pub alpha: f32,
     /// Additional alpha multiplier applied to disabled elements. Multiplies over current value of [`Style::alpha`].
@@ -25,6 +28,7 @@ pub struct Style {
     ///
     /// Generally set to 0.0 or 1.0 (other values are not well tested and cost more CPU/GPU).
     pub window_border_size: f32,
+    pub window_border_hover_padding: f32,
     /// Minimum window size
     pub window_min_size: [f32; 2],
     /// Alignment for title bar text.
@@ -84,6 +88,7 @@ pub struct Style {
     pub scrollbar_size: f32,
     /// Rounding radius of scrollbar grab corners
     pub scrollbar_rounding: f32,
+    pub scrollbar_padding: f32,
     /// Minimum width/height of a grab box for slider/scrollbar
     pub grab_min_size: f32,
     /// Rounding radius of grab corners.
@@ -98,6 +103,9 @@ pub struct Style {
     pub tab_rounding: f32,
     /// Thickness of border around tabs
     pub tab_border_size: f32,
+    pub tab_min_width_base: f32,
+    pub tab_min_width_shrink: f32,
+    pub tab_min_width_for_close_button_selected: f32,
     /// Minimum width for close button to appear on an unselected tab when hovered.
     ///
     /// `= 0.0`: always show when hovering
@@ -116,6 +124,14 @@ pub struct Style {
     /// Alignment of angled headers within the cell
     pub table_angled_headers_text_align: [f32; 2],
 
+    pub tree_lines_flags: TreeNodeFlags,
+    pub tree_lines_size: f32,
+    pub tree_lines_rounding: f32,
+    pub drag_drop_target_rounding: f32,
+    pub drag_drop_target_border_size: f32,
+    pub drag_drop_target_padding: f32,
+    pub color_marker_size: f32,
+
     /// Side of the color buttonton pubin color editor widgets (left/right).
     ///
     /// Defaults to [`Direction::Right`].
@@ -124,12 +140,16 @@ pub struct Style {
     ///
     /// Defaults to [0.5, 0.5] (centered).
     pub button_text_align: [f32; 2],
+
+    #[doc(alias = "SeparatorSize")]
+    pub separator_size: f32,
+
+    /// Thickkness of border in [`Ui::separator_with_text`](crate::Ui::separator_with_text)
+    pub separator_text_border_size: f32,
     /// Alignment of selectable text when selectable is larger than text.
     ///
     /// Defaults to [0.5, 0.5] (top-left aligned).
     pub selectable_text_align: [f32; 2],
-    /// Thickkness of border in [`Ui::separator_with_text`](crate::Ui::separator_with_text)
-    pub separator_text_border_size: f32,
     /// Alignment of text within the separator. Defaults to `[0.0, 0.5]` (left aligned, center).
     pub separator_text_align: [f32; 2],
     /// Horizontal offset of text from each edge of the separator + spacing on other axis.
@@ -199,6 +219,8 @@ pub struct Style {
     /// Default flags when using [`HoveredFlags::FOR_TOOLTIP`] or [`Ui::begin_tooltip`](crate::Ui::begin_tooltip)
     /// or [`Ui::tooltip_text`](crate::Ui::tooltip_text) while using keyboard/gamepad.
     pub hover_flags_for_tooltip_nav: HoveredFlags,
+    pub imp_main_scale: f32,
+    pub imp_next_frame_font_size_base: f32,
 }
 
 unsafe impl RawCast<sys::ImGuiStyle> for Style {}
@@ -240,6 +262,20 @@ impl Style {
         }
         self
     }
+
+    #[inline(always)]
+    pub fn sys(&self) -> &sys::ImGuiStyle {
+        unsafe { self.raw() }
+    }
+    #[inline(always)]
+    pub unsafe fn sys_mut(&mut self) -> &mut sys::ImGuiStyle {
+        self.raw_mut()
+    }
+}
+impl std::ops::Deref for Style {
+    type Target = sys::ImGuiStyle;
+    #[inline(always)]
+    fn deref(&self) -> &Self::Target { self.sys() }
 }
 
 impl Default for Style {
@@ -250,6 +286,7 @@ impl Default for Style {
             window_padding: [8.0, 8.0],
             window_rounding: 0.0,
             window_border_size: 1.0,
+            window_border_hover_padding: 4.0,
             window_min_size: [32.0, 32.0],
             window_title_align: [0.0, 0.5],
             window_menu_button_position: Direction::Left,
@@ -304,6 +341,23 @@ impl Default for Style {
                 | HoveredFlags::DELAY_NORMAL
                 | HoveredFlags::ALLOW_WHEN_DISABLED,
             colors: StyleColor::dark_colors(),
+            font_size_base: 0.0,
+            font_scale_main: 1.0,
+            font_scale_dpi: 1.0,
+            scrollbar_padding: 2.0,
+            tab_min_width_base: 1.0,
+            tab_min_width_shrink: 80.0,
+            tab_min_width_for_close_button_selected: -1.0,
+            tree_lines_flags: TreeNodeFlags::DRAW_LINES_NONE,
+            tree_lines_size: 1.0,
+            tree_lines_rounding: 0.0,
+            drag_drop_target_rounding: 0.0,
+            drag_drop_target_border_size: 2.0,
+            drag_drop_target_padding: 3.0,
+            color_marker_size: 3.0,
+            separator_size: 1.0,
+            imp_main_scale: 1.0,
+            imp_next_frame_font_size_base: 0.0,
         }
     }
 }
@@ -401,6 +455,7 @@ pub enum StyleColor {
     ResizeGripHovered = sys::ImGuiCol_ResizeGripHovered,
     /// Resize handle when mouse button down
     ResizeGripActive = sys::ImGuiCol_ResizeGripActive,
+    InputTextCursor = sys::ImGuiCol_InputTextCursor,
     /// Hovered tab (applies regardless if tab is active, or is in the active window)
     TabHovered = sys::ImGuiCol_TabHovered,
     /// Inactive tab color. Applies to both tab widgets and docked windows
@@ -448,8 +503,12 @@ pub enum StyleColor {
     /// The highlight color used for selection in text inputs
     TextSelectedBg = sys::ImGuiCol_TextSelectedBg,
 
+    TreeLines = sys::ImGuiCol_TreeLines,
+
     /// Used for drag-and-drop system
     DragDropTarget = sys::ImGuiCol_DragDropTarget,
+    DragDropTargetBg = sys::ImGuiCol_DragDropTargetBg,
+    UnsavedMarker = sys::ImGuiCol_UnsavedMarker,
     /// Gamepad/keyboard: current highlighted item
     NavHighlight = sys::ImGuiCol_NavHighlight,
     /// Highlight window when using CTRL+TAB
@@ -496,6 +555,7 @@ impl StyleColor {
         StyleColor::ResizeGrip,
         StyleColor::ResizeGripHovered,
         StyleColor::ResizeGripActive,
+        StyleColor::InputTextCursor,
         StyleColor::TabHovered,
         StyleColor::Tab,
         StyleColor::TabSelected,
@@ -518,7 +578,10 @@ impl StyleColor {
         StyleColor::TableRowBgAlt,
         StyleColor::TextLink,
         StyleColor::TextSelectedBg,
+        StyleColor::TreeLines,
         StyleColor::DragDropTarget,
+        StyleColor::DragDropTargetBg,
+        StyleColor::UnsavedMarker,
         StyleColor::NavHighlight,
         StyleColor::NavWindowingHighlight,
         StyleColor::NavWindowingDimBg,
@@ -566,6 +629,7 @@ impl StyleColor {
             StyleColor::ResizeGrip => "ResizeGrip",
             StyleColor::ResizeGripHovered => "ResizeGripHovered",
             StyleColor::ResizeGripActive => "ResizeGripActive",
+            StyleColor::InputTextCursor => "InputTextCursor",
             StyleColor::Tab => "Tab",
             StyleColor::TabHovered => "TabHovered",
             StyleColor::TabSelected => "TabSelected",
@@ -581,7 +645,10 @@ impl StyleColor {
             StyleColor::TableRowBg => "TableRowBg",
             StyleColor::TableRowBgAlt => "TableRowBgAlt",
             StyleColor::TextSelectedBg => "TextSelectedBg",
+            StyleColor::TreeLines => "TreeLines",
             StyleColor::DragDropTarget => "DragDropTarget",
+            StyleColor::DragDropTargetBg => "DragDropTargetBg",
+            StyleColor::UnsavedMarker => "UnsavedMarker",
             StyleColor::NavHighlight => "NavHighlight",
             StyleColor::NavWindowingHighlight => "NavWindowingHighlight",
             StyleColor::NavWindowingDimBg => "NavWindowingDimBg",
@@ -1093,6 +1160,8 @@ mod tests {
         assert_field_offset!(curve_tessellation_tol, CurveTessellationTol);
         assert_field_offset!(circle_tesselation_max_error, CircleTessellationMaxError);
         assert_field_offset!(colors, Colors);
+        assert_field_offset!(imp_main_scale, _MainScale);
+        assert_field_offset!(imp_next_frame_font_size_base, _NextFrameFontSizeBase);
 
         #[cfg(feature = "docking")]
         assert_field_offset!(docking_separator_size, DockingSeparatorSize);

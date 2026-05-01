@@ -218,6 +218,17 @@ pub struct Ui {
 }
 
 impl Ui {
+    pub const DEFAULT_BUFFER_SIZE: usize = 1024;
+    #[inline]
+    pub const unsafe fn new_unchecked(max_buffer_len: usize) -> Self {
+        Self {
+            buffer: cell::UnsafeCell::new(string::UiBuffer::new(max_buffer_len)),
+        }
+    }
+    #[inline(always)]
+    pub const unsafe fn empty_unchecked() -> Self {
+        Self::new_unchecked(0)
+    }
     /// This provides access to the backing scratch buffer that we use to write
     /// strings, along with null-terminators, before we pass normal Rust strs to
     /// Dear ImGui.
@@ -281,7 +292,7 @@ impl Ui {
 
     /// Returns an immutable reference to the font atlas.
     pub fn fonts(&self) -> &FontAtlas {
-        unsafe { &*(self.io().fonts as *const FontAtlas) }
+        self.io().fonts()
     }
 
     /// Returns a clone of the user interface style

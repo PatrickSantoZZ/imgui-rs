@@ -3,3 +3,9 @@ members = ["imgui", "imgui-sys", "xtask"]
 
 package.rust-version = "1.82"
 resolver = "2"
+
+[workspace.lints.rust.unexpected_cfgs]
+level = "warn"
+check-cfg = [
+  'cfg(todo)',
+]

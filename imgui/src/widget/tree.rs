@@ -47,10 +47,27 @@ bitflags!(
         const SPAN_AVAIL_WIDTH = sys::ImGuiTreeNodeFlags_SpanAvailWidth;
         /// Extend hit box to the left-most and right-most edges (bypass the indented area)
         const SPAN_FULL_WIDTH = sys::ImGuiTreeNodeFlags_SpanFullWidth;
+        const SPAN_LABEL_WIDTH = sys::ImGuiTreeNodeFlags_SpanLabelWidth;
+        const SPAN_ALL_COLUMNS = sys::ImGuiTreeNodeFlags_SpanAllColumns;
+        const LABEL_SPAN_ALL_COLUMNS = sys::ImGuiTreeNodeFlags_LabelSpanAllColumns;
         /// (WIP) Nav: left direction may move to this tree node from any of its child
-        const NAV_LEFT_JUMPS_BACK_HERE = sys::ImGuiTreeNodeFlags_NavLeftJumpsBackHere;
+        const NAV_LEFT_JUMPS_TO_PARENT = sys::ImGuiTreeNodeFlags_NavLeftJumpsToParent;
+        const DRAW_LINES_NONE = sys::ImGuiTreeNodeFlags_DrawLinesNone;
+        const DRAW_LINES_FULL = sys::ImGuiTreeNodeFlags_DrawLinesFull;
+        const DRAW_LINES_TO_NODES = sys::ImGuiTreeNodeFlags_DrawLinesToNodes;
     }
 );
+impl TreeNodeFlags {
+    pub const COLLAPSING_HEADER: Self = unsafe { Self::from_bits_unchecked(
+        Self::FRAMED.bits()
+        | Self::NO_TREE_PUSH_ON_OPEN.bits()
+        | Self::NO_AUTO_OPEN_ON_LOG.bits()
+    ) };
+    #[deprecated]
+    pub const NAV_LEFT_JUMPS_BACK_HERE: Self = Self::NAV_LEFT_JUMPS_TO_PARENT;
+    #[deprecated]
+    pub const SPAN_TEXT_WIDTH: Self = Self::SPAN_LABEL_WIDTH;
+}
 
 static FMT: &[u8] = b"%s\0";
 

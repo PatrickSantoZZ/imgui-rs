@@ -6,8 +6,9 @@ use std::path::PathBuf;
 use std::ptr;
 
 use crate::clipboard::{ClipboardBackend, ClipboardContext};
-use crate::fonts::atlas::{FontAtlas, FontId, SharedFontAtlas};
+use crate::fonts::atlas::{FontAtlas, SharedFontAtlas};
 use crate::io::Io;
+use crate::internal::RawCast;
 use crate::style::Style;
 use crate::{sys, DrawData};
 use crate::{MouseCursor, Ui};
@@ -112,91 +113,76 @@ impl Context {
     }
     /// Returns the path to the ini file, or None if not set
     pub fn ini_filename(&self) -> Option<PathBuf> {
-        let io = self.io();
-        if io.ini_filename.is_null() {
-            None
-        } else {
-            let s = unsafe { CStr::from_ptr(io.ini_filename) };
-            Some(PathBuf::from(s.to_str().ok()?))
-        }
+        self.io().ini_filename().and_then(|s|
+            s.to_str().ok().map(PathBuf::from)
+        )
     }
     /// Sets the path to the ini file (default is "imgui.ini")
     ///
     /// Pass None to disable automatic .Ini saving.
     pub fn set_ini_filename<T: Into<Option<PathBuf>>>(&mut self, ini_filename: T) {
-        let ini_filename: Option<PathBuf> = ini_filename.into();
-        let ini_filename = ini_filename.and_then(|v| CString::new(v.to_str()?).ok());
-
-        self.io_mut().ini_filename = ini_filename
-            .as_ref()
-            .map(|x| x.as_ptr())
-            .unwrap_or(ptr::null());
-        self.ini_filename = ini_filename;
+        self.ini_filename = ini_filename
+            .into()
+            .and_then(|v| CString::new(v.to_str()?).ok());
+        unsafe {
+            Self::current_io_mut_unchecked().set_ini_filename_unchecked(self.ini_filename
+                .as_ref()
+                .map(|x| x.as_c_str())
+            );
+        }
     }
     /// Returns the path to the log file, or None if not set
     // TODO: why do we return an `Option<PathBuf>` instead of an `Option<&Path>`?
     pub fn log_filename(&self) -> Option<PathBuf> {
-        let io = self.io();
-        if io.log_filename.is_null() {
-            None
-        } else {
-            let cstr = unsafe { CStr::from_ptr(io.log_filename) };
-            Some(PathBuf::from(cstr.to_str().ok()?))
-        }
+        self.io().log_filename().and_then(|s|
+            s.to_str().ok().map(PathBuf::from)
+        )
     }
     /// Sets the log filename (default is "imgui_log.txt").
     pub fn set_log_filename<T: Into<Option<PathBuf>>>(&mut self, log_filename: T) {
-        let log_filename = log_filename
+        self.log_filename = log_filename
             .into()
             .and_then(|v| CString::new(v.to_str()?).ok());
-
-        self.io_mut().log_filename = log_filename
-            .as_ref()
-            .map(|x| x.as_ptr())
-            .unwrap_or(ptr::null());
-        self.log_filename = log_filename;
+        unsafe {
+            Self::current_io_mut_unchecked().set_log_filename_unchecked(self.log_filename
+                .as_ref()
+                .map(|x| x.as_c_str())
+            );
+        }
     }
     /// Returns the backend platform name, or None if not set
     pub fn platform_name(&self) -> Option<&str> {
-        let io = self.io();
-        if io.backend_platform_name.is_null() {
-            None
-        } else {
-            let cstr = unsafe { CStr::from_ptr(io.backend_platform_name) };
+        self.io().backend_platform_name().and_then(|cstr|
             cstr.to_str().ok()
-        }
+        )
     }
     /// Sets the backend platform name
     pub fn set_platform_name<T: Into<Option<String>>>(&mut self, platform_name: T) {
-        let platform_name: Option<CString> =
+        self.platform_name =
             platform_name.into().and_then(|v| CString::new(v).ok());
-        self.io_mut().backend_platform_name = platform_name
-            .as_ref()
-            .map(|x| x.as_ptr())
-            .unwrap_or(ptr::null());
-        self.platform_name = platform_name;
+        unsafe {
+            Self::current_io_mut_unchecked().set_backend_platform_name_unchecked(self.platform_name
+                .as_ref()
+                .map(|x| x.as_c_str())
+            );
+        }
     }
     /// Returns the backend renderer name, or None if not set
     pub fn renderer_name(&self) -> Option<&str> {
-        let io = self.io();
-        if io.backend_renderer_name.is_null() {
-            None
-        } else {
-            let cstr = unsafe { CStr::from_ptr(io.backend_renderer_name) };
+        self.io().backend_renderer_name().and_then(|cstr|
             cstr.to_str().ok()
-        }
+        )
     }
     /// Sets the backend renderer name
     pub fn set_renderer_name<T: Into<Option<String>>>(&mut self, renderer_name: T) {
-        let renderer_name: Option<CString> =
+        self.renderer_name =
             renderer_name.into().and_then(|v| CString::new(v).ok());
-
-        self.io_mut().backend_renderer_name = renderer_name
-            .as_ref()
-            .map(|x| x.as_ptr())
-            .unwrap_or(ptr::null());
-
-        self.renderer_name = renderer_name;
+        unsafe {
+            Self::current_io_mut_unchecked().set_backend_renderer_name_unchecked(self.renderer_name
+                .as_ref()
+                .map(|x| x.as_c_str())
+            );
+        }
     }
     /// Loads settings from a string slice containing settings in .Ini file format
     #[doc(alias = "LoadIniSettingsFromMemory")]
@@ -246,8 +232,8 @@ impl Context {
             platform_name: None,
             renderer_name: None,
             clipboard_ctx: Box::new(ClipboardContext::dummy().into()),
-            ui: Ui {
-                buffer: UnsafeCell::new(crate::string::UiBuffer::new(1024)),
+            ui: unsafe {
+                Ui::new_unchecked(Ui::DEFAULT_BUFFER_SIZE)
             },
         }
     }
@@ -335,8 +321,8 @@ impl SuspendedContext {
             platform_name: None,
             renderer_name: None,
             clipboard_ctx: Box::new(ClipboardContext::dummy().into()),
-            ui: Ui {
-                buffer: UnsafeCell::new(crate::string::UiBuffer::new(1024)),
+            ui: unsafe {
+                Ui::new_unchecked(Ui::DEFAULT_BUFFER_SIZE)
             },
         };
         if ctx.is_current_context() {
@@ -487,36 +473,55 @@ impl Context {
             &*(sys::igGetIO() as *const Io)
         }
     }
-    /// Returns a mutable reference to the inputs/outputs object
-    pub fn io_mut(&mut self) -> &mut Io {
+    #[inline(always)]
+    pub unsafe fn current_io_mut_unchecked<'a>() -> &'a mut Io {
         unsafe {
             // safe because Io is a transparent wrapper around sys::ImGuiIO
-            &mut *(sys::igGetIO() as *mut Io)
+            Io::from_raw_mut(&mut *sys::igGetIO())
+        }
+    }
+    /// Returns a mutable reference to the inputs/outputs object
+    #[inline(always)]
+    pub fn io_mut(&mut self) -> &mut Io {
+        unsafe {
+            Self::current_io_mut_unchecked()
         }
     }
 
-    /// Returns an immutable reference to the user interface style
-    #[doc(alias = "GetStyle")]
-    pub fn style(&self) -> &Style {
+    #[inline(always)]
+    pub unsafe fn current_style_unchecked<'a>() -> &'a Style {
         unsafe {
             // safe because Style is a transparent wrapper around sys::ImGuiStyle
-            &*(sys::igGetStyle() as *const Style)
+            Style::from_raw(&*sys::igGetStyle())
+        }
+    }
+    #[inline(always)]
+    pub unsafe fn current_style_mut_unchecked<'a>() -> &'a mut Style {
+        unsafe {
+            // safe because Style is a transparent wrapper around sys::ImGuiStyle
+            Style::from_raw_mut(&mut *sys::igGetStyle())
+        }
+    }
+    /// Returns an immutable reference to the user interface style
+    #[doc(alias = "GetStyle")]
+    #[inline(always)]
+    pub fn style(&self) -> &Style {
+        unsafe {
+            Self::current_style_unchecked()
         }
     }
     /// Returns a mutable reference to the user interface style
     #[doc(alias = "GetStyle")]
+    #[inline(always)]
     pub fn style_mut(&mut self) -> &mut Style {
         unsafe {
-            // safe because Style is a transparent wrapper around sys::ImGuiStyle
-            &mut *(sys::igGetStyle() as *mut Style)
+            Self::current_style_mut_unchecked()
         }
     }
     /// Returns a mutable reference to the font atlas.
+    #[inline(always)]
     pub fn fonts(&mut self) -> &mut FontAtlas {
-        // we take this with an `&mut Self` here, which means
-        // that we can't get the sharedfontatlas through safe code
-        // otherwise
-        unsafe { &mut *self.io_mut().fonts }
+        self.io_mut().fonts_mut()
     }
 
     /// Attempts to clone the interior shared font atlas **if it exists**.
@@ -535,9 +540,11 @@ impl Context {
     #[doc(alias = "NewFrame")]
     pub fn new_frame(&mut self) -> &mut Ui {
         // Clear default font if it no longer exists. This could be an error in the future
-        let default_font = self.io().font_default;
-        if !default_font.is_null() && self.fonts().get_font(FontId(default_font)).is_none() {
-            self.io_mut().font_default = ptr::null_mut();
+        let default_font = self.io().raw().FontDefault as *const _ as *const sys::ImFont;
+        if !default_font.is_null() && !self.fonts().contains_font_raw(default_font) {
+            unsafe {
+                self.io_mut().raw_mut().FontDefault = ptr::null_mut();
+            }
         }
         // TODO: precondition checks
         unsafe {
@@ -582,6 +589,36 @@ impl Context {
             sys::ImGuiMouseCursor_NotAllowed => Some(MouseCursor::NotAllowed),
             _ => None,
         }
+    }
+
+    /// Gets the current context
+    #[inline]
+    pub fn current() -> Self {
+        Self::get_current().expect("imgui context unbound")
+    }
+    pub fn get_current() -> Option<Self> {
+        ptr::NonNull::new(unsafe {
+            sys::igGetCurrentContext()
+        }).map(|ctx| Self {
+                raw: ctx.as_ptr(),
+                shared_font_atlas: None,
+                ini_filename: None,
+                log_filename: None,
+                platform_name: None,
+                renderer_name: None,
+                clipboard_ctx: Box::new(ClipboardContext::dummy().into()),
+                ui: unsafe {
+                    Ui::empty_unchecked()
+                },
+            })
+    }
+    #[inline(always)]
+    pub unsafe fn get_ui(&self) -> &Ui {
+        &self.ui
+    }
+    #[inline(always)]
+    pub unsafe fn get_ui_mut(&mut self) -> &mut Ui {
+        &mut self.ui
     }
 }
 

@@ -922,6 +922,7 @@ impl<'ui> BezierCurve<'ui> {
 /// [`imgui::Image`](crate::Image).
 #[must_use = "should call .build() to draw the object"]
 pub struct Image<'ui> {
+    /// TODO: TextureRef
     texture_id: TextureId,
     p_min: [f32; 2],
     p_max: [f32; 2],
@@ -972,12 +973,10 @@ impl<'ui> Image<'ui> {
 
     /// Draw the image on the window.
     pub fn build(self) {
-        use std::os::raw::c_void;
-
         unsafe {
             sys::ImDrawList_AddImage(
                 self.draw_list.draw_list,
-                self.texture_id.id() as *mut c_void,
+                self.texture_id.id().into(),
                 self.p_min.into(),
                 self.p_max.into(),
                 self.uv_min.into(),
@@ -1062,12 +1061,10 @@ impl<'ui> ImageQuad<'ui> {
 
     /// Draw the image on the window.
     pub fn build(self) {
-        use std::os::raw::c_void;
-
         unsafe {
             sys::ImDrawList_AddImageQuad(
                 self.draw_list.draw_list,
-                self.texture_id.id() as *mut c_void,
+                self.texture_id.id().into(),
                 self.p1.into(),
                 self.p2.into(),
                 self.p3.into(),
@@ -1175,12 +1172,10 @@ impl<'ui> ImageRounded<'ui> {
 
     /// Draw the image on the window.
     pub fn build(self) {
-        use std::os::raw::c_void;
-
         unsafe {
             sys::ImDrawList_AddImageRounded(
                 self.draw_list.draw_list,
-                self.texture_id.id() as *mut c_void,
+                self.texture_id.id().into(),
                 self.p_min.into(),
                 self.p_max.into(),
                 self.uv_min.into(),
@@ -1211,13 +1206,16 @@ impl<'ui, F: FnOnce() + 'static> Callback<'ui, F> {
     pub fn build(self) {
         use std::os::raw::c_void;
         // F is Sized, so *mut F must be a thin pointer.
+        // TODO: size to copy/buffer is now an option, *if* F: Copy
         let callback: *mut F = Box::into_raw(Box::new(self.callback));
+        let callback_copy_size = None;
 
         unsafe {
             sys::ImDrawList_AddCallback(
                 self.draw_list.draw_list,
                 Some(Self::run_callback),
                 callback as *mut c_void,
+                callback_copy_size.unwrap_or(0),
             );
         }
     }
