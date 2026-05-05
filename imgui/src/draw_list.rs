@@ -13,7 +13,7 @@
 //! There are examples such as `draw_list.rs` and `custom_textures.rs`
 //! within the `imgui-examples` directory
 
-use bitflags::bitflags;
+use crate::bitflags;
 
 use crate::{math::MintVec2, ImColor32};
 use sys::{ImDrawCmd, ImDrawList};

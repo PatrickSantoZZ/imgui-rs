@@ -1,4 +1,4 @@
-use bitflags::bitflags;
+use crate::bitflags;
 use std::f32;
 #[cfg(todo)]
 use std::os::raw::{c_int, c_uchar, c_void};

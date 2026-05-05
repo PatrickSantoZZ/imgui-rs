@@ -1,4 +1,4 @@
-use bitflags::bitflags;
+use crate::bitflags;
 use std::os::raw::{c_char, c_void};
 
 // use crate::string::ImStr;
@@ -58,11 +58,11 @@ bitflags!(
     }
 );
 impl TreeNodeFlags {
-    pub const COLLAPSING_HEADER: Self = unsafe { Self::from_bits_unchecked(
+    pub const COLLAPSING_HEADER: Self = Self::from_bits_retain(
         Self::FRAMED.bits()
         | Self::NO_TREE_PUSH_ON_OPEN.bits()
         | Self::NO_AUTO_OPEN_ON_LOG.bits()
-    ) };
+    );
     #[deprecated]
     pub const NAV_LEFT_JUMPS_BACK_HERE: Self = Self::NAV_LEFT_JUMPS_TO_PARENT;
     #[deprecated]

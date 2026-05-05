@@ -1,4 +1,4 @@
-use bitflags::bitflags;
+use crate::bitflags;
 use std::borrow::Cow;
 
 use crate::sys;

@@ -1,4 +1,4 @@
-use bitflags::bitflags;
+use crate::bitflags;
 use std::f32;
 use std::ffi::CStr;
 use std::mem::transmute;

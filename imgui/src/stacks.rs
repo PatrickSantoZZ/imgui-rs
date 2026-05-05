@@ -451,7 +451,7 @@ impl Ui {
     }
 }
 
-bitflags::bitflags! {
+crate::bitflags! {
     /// A temporary change in item flags, used in [`Ui::push_item_flag`].
     pub struct ItemFlag: u32 {
         /// Disable keyboard tabbing. This is a "lighter" version of [`ItemFlag::NO_NAV`].

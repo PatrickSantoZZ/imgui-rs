@@ -29,7 +29,7 @@
 use std::{any, ffi, marker::PhantomData};
 
 use crate::{sys, Condition, Ui};
-use bitflags::bitflags;
+use crate::bitflags;
 
 bitflags!(
     /// Flags for igBeginDragDropSource(), igAcceptDragDropPayload()

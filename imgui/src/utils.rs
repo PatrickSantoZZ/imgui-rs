@@ -1,6 +1,6 @@
 #![allow(clippy::float_cmp)]
 
-use bitflags::bitflags;
+use crate::bitflags;
 
 use crate::input::mouse::MouseButton;
 use crate::math::MintVec2;
@@ -42,16 +42,6 @@ bitflags! {
         /// [`Ui::is_item_hovered`] only: Disable using gamepad/keyboard navigation state when active, always query mouse
         const NO_NAV_OVERRIDE = sys::ImGuiHoveredFlags_NoNavOverride;
 
-        /// Union of [`HoveredFlags::ALLOW_WHEN_OVERLAPPED_BY_ITEM`] and [`HoveredFlags::ALLOW_WHEN_OVERLAPPED_BY_WINDOW`],
-        const ALLOW_WHEN_OVERLAPPED = Self::ALLOW_WHEN_OVERLAPPED_BY_ITEM.bits | Self::ALLOW_WHEN_OVERLAPPED_BY_WINDOW.bits;
-
-        /// Union of [`HoveredFlags::ALLOW_WHEN_BLOCKED_BY_POPUP`], [`HoveredFlags::ALLOW_WHEN_BLOCKED_BY_ACTIVE_ITEM`],
-        /// [`HoveredFlags::ALLOW_WHEN_OVERLAPPED_BY_ITEM`], and [`HoveredFlags::ALLOW_WHEN_OVERLAPPED_BY_WINDOW`],
-        const RECT_ONLY = Self::ALLOW_WHEN_BLOCKED_BY_POPUP.bits | Self::ALLOW_WHEN_BLOCKED_BY_ACTIVE_ITEM.bits | Self::ALLOW_WHEN_OVERLAPPED.bits;
-
-        /// Union of [`HoveredFlags::ROOT_WINDOW`], [`HoveredFlags::CHILD_WINDOWS`],
-        const ROOT_AND_CHILD_WINDOWS = Self::ROOT_WINDOW.bits | Self::CHILD_WINDOWS.bits;
-
         /// Tooltips mode
         /// - typically used in [`Ui::is_item_hovered`] + [`Ui::tooltip`] sequence.
         /// - this is a shortcut to pull flags from [`Style::hover_flags_for_tooltip_mouse`] or
@@ -80,6 +70,17 @@ bitflags! {
         /// the previous timer for a short time (standard for tooltips with long delays)
         const NO_SHARED_DELAY = sys::ImGuiHoveredFlags_NoSharedDelay;
     }
+}
+impl HoveredFlags {
+    /// Union of [`HoveredFlags::ALLOW_WHEN_OVERLAPPED_BY_ITEM`] and [`HoveredFlags::ALLOW_WHEN_OVERLAPPED_BY_WINDOW`],
+    pub const ALLOW_WHEN_OVERLAPPED: Self = Self::from_bits_retain(Self::ALLOW_WHEN_OVERLAPPED_BY_ITEM.bits() | Self::ALLOW_WHEN_OVERLAPPED_BY_WINDOW.bits());
+
+    /// Union of [`HoveredFlags::ALLOW_WHEN_BLOCKED_BY_POPUP`], [`HoveredFlags::ALLOW_WHEN_BLOCKED_BY_ACTIVE_ITEM`],
+    /// [`HoveredFlags::ALLOW_WHEN_OVERLAPPED_BY_ITEM`], and [`HoveredFlags::ALLOW_WHEN_OVERLAPPED_BY_WINDOW`],
+    pub const RECT_ONLY: Self = Self::from_bits_retain(Self::ALLOW_WHEN_BLOCKED_BY_POPUP.bits() | Self::ALLOW_WHEN_BLOCKED_BY_ACTIVE_ITEM.bits() | Self::ALLOW_WHEN_OVERLAPPED.bits());
+
+    /// Union of [`HoveredFlags::ROOT_WINDOW`], [`HoveredFlags::CHILD_WINDOWS`],
+    pub const ROOT_AND_CHILD_WINDOWS: Self = Self::from_bits_retain(Self::ROOT_WINDOW.bits() | Self::CHILD_WINDOWS.bits());
 }
 
 /// # Item/widget utilities

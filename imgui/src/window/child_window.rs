@@ -309,7 +309,7 @@ create_token!(
     drop { sys::igEndChild() }
 );
 
-bitflags::bitflags! {
+crate::bitflags! {
     /// Configuration flags for child windows
     /// Flags for [``]
     /// About using AutoResizeX/AutoResizeY flags:

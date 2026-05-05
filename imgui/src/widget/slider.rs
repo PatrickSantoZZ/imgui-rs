@@ -1,4 +1,4 @@
-use bitflags::bitflags;
+use crate::bitflags;
 use std::os::raw::c_void;
 
 use crate::internal::DataTypeKind;

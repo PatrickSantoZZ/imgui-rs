@@ -1041,3 +1041,13 @@ pub enum Direction {
     Up = sys::ImGuiDir_Up,
     Down = sys::ImGuiDir_Down,
 }
+
+macro_rules! bitflags {
+    ($($tt:tt)*) => {
+        ::bitflags::bitflags! {
+            #[derive(Debug, Copy, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+            $($tt)*
+        }
+    };
+}
+pub(crate) use bitflags;

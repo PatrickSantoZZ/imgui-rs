@@ -1,4 +1,4 @@
-use bitflags::bitflags;
+use crate::bitflags;
 use std::ops::{BitAnd, BitAndAssign, BitOrAssign, Not};
 
 use crate::math::MintVec2;

@@ -16,7 +16,7 @@ exclude = ["/resources"]
 features = ["freetype", "docking", "tables-api"]
 
 [dependencies]
-bitflags = "1"
+bitflags = "2"
 #imgui-sys = { path = "../imgui-sys", version = "0.12" }
 imgui-sys = { git = "https://codeberg.org/TaimiHUD/libimgui", version = "0.12" }
 mint = "0.5.6"

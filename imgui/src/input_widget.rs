@@ -1,4 +1,4 @@
-use bitflags::bitflags;
+use crate::bitflags;
 use std::ops::Range;
 use std::os::raw::{c_char, c_int, c_void};
 use std::ptr;
@@ -1220,7 +1220,7 @@ extern "C" fn callback<T: InputTextCallbackHandler>(
 
     let callback_data = unsafe {
         CallbackData {
-            event_flag: InputTextFlags::from_bits((*data).EventFlag as u32).unwrap(),
+            event_flag: InputTextFlags::from_bits_retain((*data).EventFlag as u32),
             user_data: &mut *((*data).UserData as *mut UserData<T>),
         }
     };

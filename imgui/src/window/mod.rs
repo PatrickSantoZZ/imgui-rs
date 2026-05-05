@@ -1,4 +1,4 @@
-use bitflags::bitflags;
+use crate::bitflags;
 use std::f32;
 use std::ptr;
 
@@ -24,9 +24,12 @@ bitflags! {
         const ALLOW_WHEN_BLOCKED_BY_POPUP = sys::ImGuiHoveredFlags_AllowWhenBlockedByPopup;
         /// Return true even if an active item is blocking access to this window
         const ALLOW_WHEN_BLOCKED_BY_ACTIVE_ITEM = sys::ImGuiHoveredFlags_AllowWhenBlockedByActiveItem;
-        /// Test from root window, and return true if any child is hovered
-        const ROOT_AND_CHILD_WINDOWS = Self::ROOT_WINDOW.bits | Self::CHILD_WINDOWS.bits;
     }
+}
+
+impl WindowHoveredFlags {
+    /// Test from root window, and return true if any child is hovered
+    pub const ROOT_AND_CHILD_WINDOWS: Self = Self::from_bits_retain(Self::ROOT_WINDOW.bits() | Self::CHILD_WINDOWS.bits());
 }
 
 bitflags! {
@@ -39,9 +42,11 @@ bitflags! {
         const ROOT_WINDOW = sys::ImGuiFocusedFlags_RootWindow;
         /// Return true if any window is focused
         const ANY_WINDOW = sys::ImGuiFocusedFlags_AnyWindow;
-        /// Test from root window, and return true if any child is focused
-        const ROOT_AND_CHILD_WINDOWS = Self::ROOT_WINDOW.bits | Self::CHILD_WINDOWS.bits;
     }
+}
+impl WindowFocusedFlags {
+    /// Test from root window, and return true if any child is focused
+    pub const ROOT_AND_CHILD_WINDOWS: Self = Self::from_bits_retain(Self::ROOT_WINDOW.bits() | Self::CHILD_WINDOWS.bits());
 }
 
 bitflags! {

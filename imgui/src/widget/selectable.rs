@@ -1,4 +1,4 @@
-use bitflags::bitflags;
+use crate::bitflags;
 
 use crate::math::MintVec2;
 use crate::sys;

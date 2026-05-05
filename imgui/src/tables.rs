@@ -1,7 +1,7 @@
 use std::ffi::CStr;
 use std::marker::PhantomData;
 
-use bitflags::bitflags;
+use crate::bitflags;
 
 use crate::sys;
 use crate::{Id, ImColor32, Ui};
@@ -161,7 +161,6 @@ bitflags! {
 bitflags! {
     /// Flags for [TableColumnSetup] and [table_setup_column_with].
     #[repr(transparent)]
-    #[derive(Default)]
     pub struct TableColumnFlags: u32 {
         // Input configuration flags
 
@@ -666,8 +665,7 @@ impl Ui {
     /// Gets the flags on the current column in the current table.
     pub fn table_column_flags(&self) -> TableColumnFlags {
         unsafe {
-            TableColumnFlags::from_bits(sys::igTableGetColumnFlags(-1) as u32)
-                .expect("bad column flags")
+            TableColumnFlags::from_bits_retain(sys::igTableGetColumnFlags(-1) as u32)
         }
     }
 
@@ -676,8 +674,7 @@ impl Ui {
     /// [table_column_flags](Self::table_column_flags).
     pub fn table_column_flags_with_column(&self, column_n: usize) -> TableColumnFlags {
         unsafe {
-            TableColumnFlags::from_bits(sys::igTableGetColumnFlags(column_n as i32) as u32)
-                .expect("bad column flags")
+            TableColumnFlags::from_bits_retain(sys::igTableGetColumnFlags(column_n as i32) as u32)
         }
     }
 
