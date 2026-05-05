@@ -16,7 +16,7 @@ exclude = ["/resources"]
 bitflags = "1"
 #imgui-sys = { package = "arcdps-imgui-sys", version = "0.8.0", path = "../imgui-sys" }
 imgui-sys = { package = "arcdps-imgui-sys", version = "0.8.0", git = "https://codeberg.org/TaimiHUD/libimgui" }
-parking_lot = "0.11"
+parking_lot = "0.12"
 
 [features]
 default = ["min-const-generics"]
